@@ -488,7 +488,7 @@ class Auto extends React.Component {
                       </tr>
                     </thead>
                     <tbody>
-                      {this.state.modalInfo.credits.forEach((el) => (
+                      {this.state.modalInfo.credits.map((el) => (
                         <tr>
                           <td>
                             {el.profile_path && (
