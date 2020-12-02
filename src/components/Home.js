@@ -8,7 +8,7 @@ const Home = (props) => {
     <Container fluid>
       <Row className="justify-content-center pt-4">
         <Col md="auto pt-4">
-          <h2 className="text-center">Find the Movie Connection</h2>
+          <h2 className="text-center">Movie Connection</h2>
         </Col>
       </Row>
       <p className="text-center pt-3">
