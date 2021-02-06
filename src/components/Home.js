@@ -27,7 +27,9 @@ const Home = (props) => {
       </Row>
 
       <Row className="justify-content-center">
-        <Image src={frontImage} style={{ maxWidth: "65%" }} />
+        <Col xs={10} md={5}>
+          <Image src={frontImage} fluid />
+        </Col>
       </Row>
     </Container>
   );
