@@ -6,16 +6,6 @@ import Auto2 from "./Auto";
 import Search from "./Search";
 let backgroundImage = "Images/BackgroundArt.png";
 
-// const originalState = {
-//   arrayOfPops: [],
-//   primary: "",
-//   secondary: "",
-//   showAuto: false,
-//   showSearch: false,
-//   showPickMethod: false,
-//   switchActorsAllowed: true,
-// };
-
 class AutoStart extends React.Component {
   constructor() {
     super();
@@ -98,9 +88,10 @@ class AutoStart extends React.Component {
   }
 
   makeRandomChoice() {
-    let randomActor = this.state.arrayOfPops[
-      Math.floor(Math.random() * this.state.arrayOfPops.length)
-    ];
+    let randomActor =
+      this.state.arrayOfPops[
+        Math.floor(Math.random() * this.state.arrayOfPops.length)
+      ];
 
     this.setState((prevState) => ({
       arrayOfPops: this.state.arrayOfPops.filter((i) => i !== randomActor),

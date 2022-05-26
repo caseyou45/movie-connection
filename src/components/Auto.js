@@ -129,9 +129,10 @@ class Auto extends React.Component {
 
     this.removePeople(actorID);
 
-    let chosenID = this.state.arrayOfActorIDs[
-      Math.floor(Math.random() * this.state.arrayOfActorIDs.length)
-    ];
+    let chosenID =
+      this.state.arrayOfActorIDs[
+        Math.floor(Math.random() * this.state.arrayOfActorIDs.length)
+      ];
 
     for (let index = 0; index < this.props.arrayOfPops.length; index++) {
       if (
@@ -145,17 +146,6 @@ class Auto extends React.Component {
     this.setState({ arrayOfActorIDs: [] });
 
     if (this.state.foundMatch.length === 0) {
-      // this.setState({
-      //   timeoutsArray: [
-      //     ...this.state.timeoutsArray,
-      //     // setTimeout(() => {
-      //     //   this.byActorIDGetMoviesAndCredits(chosenID);
-      //     // }, 500),
-      //     setTimeout(() => {
-      //       this.byActorIDGetMoviesAndCredits(chosenID);
-      //     }, 500),
-      //   ],
-      // });
       this.byActorIDGetMoviesAndCredits(chosenID);
     } else {
       this.formatInfo();
@@ -193,20 +183,6 @@ class Auto extends React.Component {
           });
         });
       }
-
-      //   holder.forEach((actor, index) => {
-      //     holder.forEach((movieObject, moveIndex) => {
-      //       const foundRepeat = movieObject.credits.find(
-      //         (element) => element.id === actor.id
-      //       );
-      //       if (foundRepeat) {
-      //         console.log.log(actor.name);
-      //         console.log.log(movieObject.name);
-      //       } else {
-      //         console.log("no repeat");
-      //       }
-      //     });
-      //   });
 
       let noRepeats = this.state.finalArray.filter(
         (thing, index, self) =>
