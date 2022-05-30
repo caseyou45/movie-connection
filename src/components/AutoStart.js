@@ -1,313 +1,251 @@
-import React from "react";
+import React, { useState } from "react";
 import { Container, Row, Image, Col, Card, Button } from "react-bootstrap";
-import axios from "axios";
-import Auto2 from "./Auto";
+import Auto2 from "./AutoR";
+import movieServices from "../services/movie";
 
 import Search from "./Search";
 let backgroundImage = "Images/BackgroundArt.png";
 
-class AutoStart extends React.Component {
-  constructor() {
-    super();
-    this.state = {
-      arrayOfPops: [],
-      primary: "",
-      secondary: "",
-      showAuto: false,
-      showSearch: false,
-      showPickMethod: false,
-      switchActorsAllowed: true,
-    };
+const AutoStart = () => {
+  const [actorsByPopularity, setActorsByPopularity] = useState([]);
+  const [primary, setPrimary] = useState("");
+  const [secondary, setSecondary] = useState("");
+  const [showAuto, setShowAuto] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showPickMethod, setShowPickMethod] = useState(false);
+  const [switchActorsAllowed, setSwitchActorsAllowed] = useState(true);
 
-    this.baseState = {
-      primary: "",
-      secondary: "",
-      showAuto: false,
-      showSearch: false,
-      showPickMethod: false,
-      switchActorsAllowed: true,
-    };
+  useState(async () => {
+    let currentPage = 1;
+    const temp = [];
 
-    this.getRandom = this.getRandom.bind(this);
-    this.searchSetup = this.searchSetup.bind(this);
-    this.getPrimary = this.getPrimary.bind(this);
-    this.getSecondary = this.getSecondary.bind(this);
-  }
-
-  componentDidMount() {
-    axios
-      .get(
-        `https://api.themoviedb.org/3/person/popular?api_key=aefae7a94f1e64124f45d882269ee568&language=en-US&page=1`
-      )
-      .then((response) => {
-        this.getCelebs(50, response.data.page);
-      })
-
-      .catch((error) => {
-        console.log(error);
-      });
-  }
-
-  getCelebs(pages, pageNum) {
-    axios
-      .get(
-        `https://api.themoviedb.org/3/person/popular?api_key=aefae7a94f1e64124f45d882269ee568&language=en-US&page=${pageNum}`
-      )
-      .then((response) => {
-        this.setState({
-          arrayOfPops: [...this.state.arrayOfPops, ...response.data.results],
-        });
-
-        if (pageNum < pages) {
-          let x = pageNum + 1;
-          this.getCelebs(pages, x);
-        }
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-  }
-
-  getRandom() {
-    if (this.state.primary !== "" && this.state.secondary !== "") {
-      this.reset();
-
-      this.setState({
-        primary: this.makeRandomChoice(),
-        secondary: this.makeRandomChoice(),
-      });
-      this.setState({ showAuto: true });
-    } else {
-      this.setState({ showAuto: true, showPickMethod: true });
-
-      this.setState({
-        primary: this.makeRandomChoice(),
-        secondary: this.makeRandomChoice(),
-      });
-    }
-  }
-
-  makeRandomChoice() {
-    let randomActor =
-      this.state.arrayOfPops[
-        Math.floor(Math.random() * this.state.arrayOfPops.length)
-      ];
-
-    this.setState((prevState) => ({
-      arrayOfPops: this.state.arrayOfPops.filter((i) => i !== randomActor),
-    }));
-
-    return randomActor;
-  }
-
-  searchSetup() {
-    if (
-      this.state.primary !== "" ||
-      (this.state.secondary !== "" && this.state.showSearch === false)
-    ) {
-      this.reset();
-
-      this.setState({ showSearch: true });
-    } else {
-      this.setState({ showSearch: true });
+    while (currentPage < 50) {
+      currentPage += 1;
+      const res = await movieServices.getArrayofPopularActors(currentPage);
+      temp.push(...res);
     }
 
-    this.setState({ showPickMethod: true });
-  }
+    setActorsByPopularity(temp);
+  }, []);
 
-  reset = () => {
-    this.setState(this.baseState);
+  const getRandom = () => {
+    if (primary !== "" && secondary !== "") {
+      reset();
+      setShowAuto(true);
+    } else {
+      setShowAuto(true);
+      setShowPickMethod(true);
+    }
+
+    setPrimary(makeRandomChoice());
+    setSecondary(makeRandomChoice());
   };
 
-  getPrimary(first) {
-    this.setState({ primary: first });
-    if (this.state.secondary !== "") {
-      this.setState({ showAuto: true });
-    }
-  }
+  const makeRandomChoice = () => {
+    const randomActor =
+      actorsByPopularity[Math.floor(Math.random() * actorsByPopularity.length)];
 
-  getSecondary(second) {
-    this.setState({ secondary: second });
-    if (this.state.primary !== "") {
-      this.setState({ showAuto: true });
-    }
-  }
+    setActorsByPopularity(actorsByPopularity.filter((i) => i !== randomActor));
 
-  switchActor(position) {
-    if (!this.state.showSearch) {
+    return randomActor;
+  };
+
+  const searchSetup = () => {
+    if (primary !== "" || (secondary !== "" && showSearch === false)) {
+      reset();
+    }
+    setShowSearch(true);
+    setShowPickMethod(true);
+  };
+
+  const reset = () => {
+    setPrimary("");
+    setSecondary("");
+    setShowAuto(false);
+    setShowSearch(true);
+    setShowPickMethod(false);
+    setSwitchActorsAllowed(true);
+  };
+
+  const getPrimary = (first) => {
+    setPrimary(first);
+    if (secondary !== "") {
+      setShowAuto(true);
+    }
+  };
+
+  const getSecondary = (second) => {
+    setSecondary(second);
+    if (primary !== "") {
+      setShowAuto(true);
+    }
+  };
+
+  const switchActor = (position) => {
+    if (!showSearch) {
       if (position === "primary") {
-        this.setState({
-          primary: this.makeRandomChoice(),
-        });
+        setPrimary(makeRandomChoice());
       }
       if (position === "secondary") {
-        this.setState({
-          secondary: this.makeRandomChoice(),
-        });
+        setSecondary(makeRandomChoice());
       }
       if (position === "both") {
-        this.setState({
-          primary: this.makeRandomChoice(),
-          secondary: this.makeRandomChoice(),
-        });
+        setPrimary(makeRandomChoice());
+        setSecondary(makeRandomChoice());
       }
     }
 
-    if (this.state.showSearch) {
+    if (showSearch) {
       if (position === "primary") {
-        this.setState({ primary: "" });
+        setPrimary("");
       }
       if (position === "secondary") {
-        this.setState({ secondary: "" });
+        setSecondary("");
       }
     }
-  }
+  };
 
-  render() {
-    return (
-      <Container>
-        <Row className="justify-content-center mt-4">
-          <Image src={backgroundImage} style={{ width: "15rem" }} />
-        </Row>
+  return (
+    <Container>
+      <Row className="justify-content-center mt-4">
+        <Image src={backgroundImage} style={{ width: "15rem" }} />
+      </Row>
 
-        <Row className="justify-content-center m-4">
-          {!this.state.showPickMethod && this.state.arrayOfPops.length > 20 && (
-            <Card
-              style={{ width: "20rem" }}
-              className="justify-content-center p-3 shadow-sm border-0"
-            >
-              <Button
-                onClick={() => {
-                  this.getRandom();
-                }}
-                className="m-3"
-                variant="primary"
-              >
-                Pick Random Actors For Me
-              </Button>
-
-              <Button
-                className="m-3"
-                variant="primary"
-                onClick={() => this.searchSetup()}
-              >
-                I'll Pick Them Myself
-              </Button>
-            </Card>
-          )}
-          {this.state.showPickMethod && (
-            <Card
-              style={{ width: "20rem" }}
-              className="justify-content-center p-3 shadow-sm border-0"
-            >
-              <Button
-                className="m-3"
-                variant="primary"
-                onClick={() => this.setState({ showPickMethod: false })}
-              >
-                Back To Pick Options
-              </Button>
-            </Card>
-          )}
-        </Row>
-        <Row className="justify-content-center mt-2">
-          {this.state.primary !== "" && this.state.secondary !== "" && (
+      <Row className="justify-content-center m-4">
+        {!showPickMethod && actorsByPopularity.length > 20 && (
+          <Card
+            style={{ width: "20rem" }}
+            className="justify-content-center p-3 shadow-sm border-0"
+          >
             <Button
-              className="mb-1"
-              variant="link"
-              size="sm"
-              onClick={() => this.switchActor("both")}
-              disabled={!this.state.switchActorsAllowed}
+              onClick={() => {
+                getRandom();
+              }}
+              className="m-3"
+              variant="primary"
             >
-              Switch Both
+              Pick Random Actors For Me
             </Button>
-          )}
-        </Row>
-        <Row className="justify-content-center mt-3">
-          <div>
-            <Col md="auto">
-              {this.state.primary !== "" && (
-                <Card style={{ width: "8rem", border: "0" }}>
-                  {this.state.primary.profile_path && (
-                    <Card.Img
-                      rounded
-                      src={
-                        "https://image.tmdb.org/t/p/w154/" +
-                        this.state.primary.profile_path
-                      }
-                    />
-                  )}
-                  <Card.Text className="text-center mt-2 mb-0">
-                    {this.state.primary.name}
-                  </Card.Text>
-                  <Button
-                    className="mb-1"
-                    variant="link"
-                    size="sm"
-                    onClick={() => this.switchActor("primary")}
-                    disabled={!this.state.switchActorsAllowed}
-                  >
-                    Switch
-                  </Button>
-                </Card>
-              )}
-            </Col>
-          </div>
-          <div>
-            <Col md="auto">
-              {this.state.secondary !== "" && (
-                <Card style={{ width: "8rem", border: "0" }}>
-                  {this.state.secondary.profile_path && (
-                    <Card.Img
-                      rounded
-                      src={
-                        "https://image.tmdb.org/t/p/w154/" +
-                        this.state.secondary.profile_path
-                      }
-                    />
-                  )}
-                  <Card.Text className="text-center mt-2 mb-0">
-                    {this.state.secondary.name}
-                  </Card.Text>
-                  <Button
-                    className="mb-1"
-                    variant="link"
-                    size="sm"
-                    onClick={() => this.switchActor("secondary")}
-                    disabled={!this.state.switchActorsAllowed}
-                  >
-                    Switch
-                  </Button>
-                </Card>
-              )}
-            </Col>
-          </div>
-        </Row>
 
-        {this.state.showAuto && (
-          <Auto2
-            arrayOfPops={this.state.arrayOfPops}
-            primary={this.state.primary}
-            secondary={this.state.secondary}
-            reset={this.reset}
-            // showSearch={this.state.showSearch}
-            showSearch={(showSearch) => this.setState({ showSearch })}
-            switchActorsAllowed={(switchActorsAllowed) =>
-              this.setState({ switchActorsAllowed })
-            }
-          />
+            <Button
+              className="m-3"
+              variant="primary"
+              onClick={() => searchSetup()}
+            >
+              I'll Pick Them Myself
+            </Button>
+          </Card>
         )}
-        {this.state.showSearch && (
-          <Search
-            getPrimary={this.getPrimary}
-            getSecondary={this.getSecondary}
-            primary={this.state.primary}
-            secondary={this.state.secondary}
-          />
+        {showPickMethod && (
+          <Card
+            style={{ width: "20rem" }}
+            className="justify-content-center p-3 shadow-sm border-0"
+          >
+            <Button
+              className="m-3"
+              variant="primary"
+              onClick={() => setShowPickMethod(false)}
+            >
+              Back To Pick Options
+            </Button>
+          </Card>
         )}
-      </Container>
-    );
-  }
-}
+      </Row>
+      <Row className="justify-content-center mt-2">
+        {primary !== "" && secondary !== "" && (
+          <Button
+            className="mb-1"
+            variant="link"
+            size="sm"
+            onClick={() => switchActor("both")}
+            disabled={!switchActorsAllowed}
+          >
+            Switch Both
+          </Button>
+        )}
+      </Row>
+      <Row className="justify-content-center mt-3">
+        <div>
+          <Col md="auto">
+            {primary !== "" && (
+              <Card style={{ width: "8rem", border: "0" }}>
+                {primary.profile_path && (
+                  <Card.Img
+                    rounded
+                    src={
+                      "https://image.tmdb.org/t/p/w154/" + primary.profile_path
+                    }
+                  />
+                )}
+                <Card.Text className="text-center mt-2 mb-0">
+                  {primary.name}
+                </Card.Text>
+                <Button
+                  className="mb-1"
+                  variant="link"
+                  size="sm"
+                  onClick={() => switchActor("primary")}
+                  disabled={!switchActorsAllowed}
+                >
+                  Switch
+                </Button>
+              </Card>
+            )}
+          </Col>
+        </div>
+        <div>
+          <Col md="auto">
+            {secondary !== "" && (
+              <Card style={{ width: "8rem", border: "0" }}>
+                {secondary.profile_path && (
+                  <Card.Img
+                    rounded
+                    src={
+                      "https://image.tmdb.org/t/p/w154/" +
+                      secondary.profile_path
+                    }
+                  />
+                )}
+                <Card.Text className="text-center mt-2 mb-0">
+                  {secondary.name}
+                </Card.Text>
+                <Button
+                  className="mb-1"
+                  variant="link"
+                  size="sm"
+                  onClick={() => switchActor("secondary")}
+                  disabled={!switchActorsAllowed}
+                >
+                  Switch
+                </Button>
+              </Card>
+            )}
+          </Col>
+        </div>
+      </Row>
+
+      {showAuto && (
+        <Auto2
+          actorsByPopularity={actorsByPopularity}
+          primary={primary}
+          secondary={secondary}
+          reset={reset}
+          showSearch={showSearch}
+          setShowSearch={setShowSearch}
+          switchActorsAllowed={switchActorsAllowed}
+          setSwitchActorsAllowed={setSwitchActorsAllowed}
+        />
+      )}
+      {showSearch && (
+        <Search
+          getPrimary={getPrimary}
+          getSecondary={getSecondary}
+          primary={primary}
+          secondary={secondary}
+        />
+      )}
+    </Container>
+  );
+};
 
 export default AutoStart;

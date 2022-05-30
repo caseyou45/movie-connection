@@ -2,7 +2,7 @@ import React from "react";
 import { Container, Row, Col, Button, Image } from "react-bootstrap";
 
 const Home = (props) => {
-  let frontImage = "Images/FrontArt.png";
+  const frontImage = "Images/FrontArt.png";
 
   return (
     <Container fluid>
