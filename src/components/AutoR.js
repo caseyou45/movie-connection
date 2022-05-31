@@ -1,18 +1,8 @@
 import React, { useState } from "react";
 import movieServices from "../services/movie";
-import axios from "axios";
+import ModalComponent from "./ModalComponent";
 
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Button,
-  Spinner,
-  Modal,
-  Image,
-  Table,
-} from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Spinner } from "react-bootstrap";
 
 const Auto = ({
   actorsByPopularity,
@@ -24,21 +14,16 @@ const Auto = ({
 }) => {
   const [finalArray, setFinalArray] = useState([]);
   const [finalRepeats, setFinalRepeats] = useState([]);
-
   const [showModal, setShowModal] = useState(false);
   const [modalInfo, setModalInfo] = useState({});
-  const [go, setGo] = useState(false);
-
   const [showReset, setShowReset] = useState(false);
   const [showWaitAnimation, setShowWaitAnimation] = useState(false);
-  let foundMatch = false;
   const timeoutsArray = [];
   const allCompondedMovies = [];
-
   const searchedIDS = [];
-  let numberOfMoviesSearched = 0;
-
+  const [numberOfMoviesSearched, setNumberOfMoviesSearched] = useState(0);
   const handleClose = () => setShowModal(false);
+  let foundMatch = false;
 
   const handleShow = (el) => {
     setShowModal(true);
@@ -104,62 +89,67 @@ const Auto = ({
   };
 
   const formatInfo = () => {
-    const promises = [];
     const finalArrayTemp = [];
 
-    searchedIDS.forEach((el) => {
-      let actorInfo = movieServices.getActorInfo(el);
-      promises.push(actorInfo);
-    });
+    //Get information about the actors saved in searchedIDS
+    const actorInfo = movieServices.getActorInfo(searchedIDS);
 
-    Promise.all(promises).then((responses) => {
-      for (let index = 0; index < searchedIDS.length + 1; index++) {
-        allCompondedMovies.forEach((actorsArrays) => {
-          actorsArrays.forEach((movie) => {
-            movie.credits.forEach((el) => {
-              if (
-                el.id === searchedIDS[index + 1] &&
-                movie.actor === searchedIDS[index]
-              ) {
-                let movieFinal = {
-                  lead: responses[index],
-                  movie: movie.film,
-                  credits: movie.credits,
-                  co: responses[index + 1],
-                };
+    //Iterate through actorInfo and allCompondedMovies arrays.
+    //Combine info in to an array of objects that will be used to create
+    //the solution's cards
+    for (let index = 0; index < searchedIDS.length + 1; index++) {
+      allCompondedMovies.forEach((actorsArrays) => {
+        actorsArrays.forEach((movie) => {
+          movie.credits.forEach((el) => {
+            if (
+              el.id === searchedIDS[index + 1] &&
+              movie.actor === searchedIDS[index]
+            ) {
+              const movieFinal = {
+                lead: actorInfo[index],
+                movie: movie.film,
+                credits: movie.credits,
+                co: actorInfo[index + 1],
+              };
 
-                finalArrayTemp.push(movieFinal);
-              }
-            });
+              finalArrayTemp.push(movieFinal);
+            }
           });
         });
-      }
-
-      let noRepeats = finalArrayTemp.filter(
-        (thing, index, self) =>
-          index ===
-          self.findIndex(
-            (t) =>
-              t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
-          )
-      );
-
-      let repeats = finalArrayTemp.filter(
-        (thing, index, self) =>
-          index !==
-          self.findIndex(
-            (t) =>
-              t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
-          )
-      );
-
-      setShowWaitAnimation(false);
-      setFinalArray(noRepeats);
-      setFinalRepeats(repeats);
-      window.scrollBy({
-        top: 500,
-        behavior: "smooth",
       });
+    }
+
+    //Create an array that does not contain repeated matches of actors
+    const noRepeats = finalArrayTemp.filter(
+      (thing, index, self) =>
+        index ===
+        self.findIndex(
+          (t) => t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
+        )
+    );
+
+    //Create an array that contains only the repeated matches of actors
+    const repeats = finalArrayTemp.filter(
+      (thing, index, self) =>
+        index !==
+        self.findIndex(
+          (t) => t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
+        )
+    );
+
+    //Turn off wait spirala
+    setShowWaitAnimation(false);
+
+    //Reassign the finalArray to the array without repeats
+    setFinalArray(noRepeats);
+
+    //Set an array that contains repeats
+    setFinalRepeats(repeats);
+
+    //Scroll the screen a bit as solution's cards are rendered to the DOM
+    window.scrollBy({
+      top: 500,
+      behavior: "smooth",
     });
   };
 
@@ -198,6 +188,7 @@ const Auto = ({
     }
 
     allCompondedMovies.push(compoundedMovieArray);
+    setNumberOfMoviesSearched((prev) => (prev += compoundedMovieArray.length));
 
     compoundedMovieArray.forEach((movie) => {
       movie.credits.forEach((actor) => {
@@ -223,6 +214,7 @@ const Auto = ({
     );
   };
 
+  //Display a button that will allow a user to see repeats
   const HandleRepeats = (index, lead, arr) => {
     let re = arr.filter((el) => el.lead.id === lead);
     if (re.length !== 0) {
@@ -240,6 +232,7 @@ const Auto = ({
     }
   };
 
+  //Add repeats to the DOM if users requests
   const loadRepeats = (id, arr, ind) => {
     let temp = finalArray;
     let temp2 = finalRepeats;
@@ -249,6 +242,7 @@ const Auto = ({
       let x = temp2.findIndex((x) => x.lead.id === el.lead.id);
       temp2.splice(x, 1);
     });
+
     setFinalRepeats(temp2);
     setFinalArray(temp);
   };
@@ -280,7 +274,7 @@ const Auto = ({
           <Col md="auto">
             <Spinner animation="border" variant="primary" />
             <p className="mt-4">
-              Number of Movies Searched: {allCompondedMovies.length}
+              Number of Movies Searched: {numberOfMoviesSearched}
             </p>
           </Col>
         </Row>
@@ -328,97 +322,11 @@ const Auto = ({
         </Row>
       ))}
       {showModal && (
-        <Modal show={showModal} onHide={handleClose}>
-          <Modal.Body>
-            <Container>
-              <Row>
-                <Col xs={12} md={12} className="mt-2">
-                  <h5 className="text-center">
-                    <i>{modalInfo.movie.original_title}</i>
-                  </h5>
-                </Col>
-              </Row>
-              <Row className="my-2">
-                <Col xs={6} md={6}>
-                  <Image
-                    src={
-                      "https://image.tmdb.org/t/p/w154/" +
-                      modalInfo.movie.poster_path
-                    }
-                  ></Image>
-                </Col>
-
-                <Col xs={6} md={6} style={{ fontSize: ".85rem" }}>
-                  <p>
-                    Length
-                    <br></br>
-                    {Math.floor(modalInfo.movie.runtime / 60)}h :{" "}
-                    {modalInfo.movie.runtime % 60}m
-                  </p>
-                  <p>
-                    Release Date:
-                    <br></br>
-                    {modalInfo.movie.release_date}
-                  </p>
-                  <p>
-                    Budget: <br></br>$
-                    {modalInfo.movie.budget
-                      .toString()
-                      .replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,")}
-                  </p>
-                  <p>
-                    Revenue: <br></br>$
-                    {modalInfo.movie.revenue
-                      .toString()
-                      .replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,")}
-                  </p>
-                </Col>
-              </Row>
-              <Row className="border-top mt-2">
-                <Col className="mt-2" xs={12} md={12}>
-                  <p style={{ fontSize: ".9rem" }} className="mt-2">
-                    {modalInfo.movie.overview}
-                  </p>
-                </Col>
-              </Row>
-              <Row>
-                <Table striped>
-                  <thead>
-                    <tr>
-                      <th></th>
-                      <th>Cast</th>
-                      <th>Character</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modalInfo.credits.map((el) => (
-                      <tr>
-                        <td>
-                          {el.profile_path && (
-                            <Image
-                              style={{ width: "3rem" }}
-                              src={
-                                "https://image.tmdb.org/t/p/w154/" +
-                                el.profile_path
-                              }
-                            ></Image>
-                          )}
-                        </td>
-                        <td>{el.name}</td>
-                        <td>{el.character}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </Row>
-            </Container>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleClose}>
-              Close
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        <ModalComponent
+          modalInfo={modalInfo}
+          showModal={showModal}
+          handleClose={handleClose}
+        />
       )}
     </Container>
   );

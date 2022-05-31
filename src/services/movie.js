@@ -37,11 +37,18 @@ const getMovieInfo = async (arrayOfMovieIDs) => {
   return temp;
 };
 
-const getActorInfo = async (actorID) => {
-  const response = await axios.get(
-    `https://api.themoviedb.org/3/person/${actorID}?api_key=aefae7a94f1e64124f45d882269ee568&language=en-US`
-  );
-  return response.data;
+const getActorInfo = async (searchedIDS) => {
+  const promises = [];
+
+  for (let index = 0; index < searchedIDS.length; index++) {
+    promises.push(
+      await axios.get(
+        `https://api.themoviedb.org/3/person/${searchedIDS[index]}?api_key=aefae7a94f1e64124f45d882269ee568&language=en-US`
+      )
+    );
+  }
+  const temp = Promise.all(promises);
+  return temp;
 };
 
 const getMoviesActorIsIn = async (actorID) => {
