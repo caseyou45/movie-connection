@@ -1,306 +1,241 @@
-import React from "react";
-import axios from "axios";
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Button,
-  Spinner,
-  Modal,
-  Image,
-  Table,
-} from "react-bootstrap";
+import React, { useState } from "react";
+import movieServices from "../services/movie";
+import ModalComponent from "./ModalComponent";
 
-class Auto extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      arrayOfActorIDs: [],
-      finalArray: [],
-      finalRepeats: [],
-      foundMatch: [],
-      megaArray: [],
-      numberOfMoviesSearched: 0,
-      responseArray: [],
-      searchedIDS: [],
-      showModal: false,
-      modalInfo: {},
+import { Container, Row, Col, Card, Button, Spinner } from "react-bootstrap";
 
-      showReset: false,
-      showWaitAnimation: false,
-      showInfoIndex: "",
-      timeoutsArray: [],
-    };
+const Auto = ({
+  actorsByPopularity,
+  primary,
+  secondary,
+  reset,
+  setShowSearch,
+  setSwitchActorsAllowed,
+}) => {
+  const [finalArray, setFinalArray] = useState([]);
+  const [finalRepeats, setFinalRepeats] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [modalInfo, setModalInfo] = useState({});
+  const [showReset, setShowReset] = useState(false);
+  const [showWaitAnimation, setShowWaitAnimation] = useState(false);
 
-    this.baseState = this.state;
+  const [numberOfMoviesSearched, setNumberOfMoviesSearched] = useState(0);
+  const handleClose = () => setShowModal(false);
+  let continueProcess = true;
+  const timeoutsArray = [];
+  const allCompondedMovies = [];
+  const searchedIDS = [];
 
-    this.reset = this.reset.bind(this);
-    this.start = this.start.bind(this);
-    this.loadRepeats = this.loadRepeats.bind(this);
-  }
-
-  handleClose = () => this.setState({ showModal: false });
-  handleShow = (el) => {
-    this.setState({ showModal: true, modalInfo: el });
-    console.log(this.state.modalInfo);
+  const handleShow = (el) => {
+    setShowModal(true);
+    setModalInfo(el);
   };
 
-  cancelAllTimeouts = () => {
-    for (let index = 0; index < this.state.timeoutsArray.length; index++) {
-      clearTimeout(this.state.timeoutsArray[index]);
+  const cancelAllTimeouts = () => {
+    for (let index = 0; index < timeoutsArray.length; index++) {
+      clearTimeout(timeoutsArray[index]);
     }
   };
 
-  reset = () => {
-    this.cancelAllTimeouts();
-    this.setState(this.baseState);
-    this.props.reset();
-  };
-
-  getMoviesCredits = async (movieID) => {
-    const response = await axios.get(
-      ` https://api.themoviedb.org/3/movie/${movieID}/credits?api_key=aefae7a94f1e64124f45d882269ee568`
-    );
-    return response.data.cast;
-  };
-
-  getMovieInfo = async (movieID) => {
-    const response = await axios.get(
-      ` https://api.themoviedb.org/3/movie/${movieID}?api_key=aefae7a94f1e64124f45d882269ee568`
-    );
-    return response.data;
-  };
-  getMoviesActorIsIn = async (actorID) => {
-    await axios
-      .get(
-        `https://api.themoviedb.org/3/person/${actorID}/movie_credits?api_key=aefae7a94f1e64124f45d882269ee568&language=en-US `
-      )
-      .then((response) => {
-        response.data.cast.forEach((el) => {
-          if (!el.genre_ids.includes(99)) {
-            if (!el.genre_ids.includes(10770)) {
-              if (
-                typeof el.character !== "undefined" &&
-                el.character.length &&
-                !el.character.includes("self") &&
-                !el.character.includes("Narrator")
-              ) {
-                this.setState({
-                  responseArray: [...this.state.responseArray, el.id],
-                });
-              }
-            }
-          }
-        });
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-  };
-
-  getActorInfo = async (actorID) => {
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/person/${actorID}?api_key=aefae7a94f1e64124f45d882269ee568&language=en-US`
-    );
-    return response.data;
-  };
-
-  start = () => {
-    if (this.props.primary !== "" && this.props.secondary !== "") {
-      this.props.showSearch(false);
-      this.props.switchActorsAllowed(false);
-      this.byActorIDGetMoviesAndCredits(this.props.primary.id);
-      this.setState({ showReset: true, showWaitAnimation: true });
+  const start = () => {
+    if (primary !== "" && secondary !== "") {
+      setShowSearch(false);
+      setShowSearch(false);
+      setSwitchActorsAllowed(false);
+      byActorIDGetMoviesAndCredits(primary.id);
+      setShowReset(true);
+      setShowWaitAnimation(true);
     }
   };
 
-  removePeople() {
-    this.state.searchedIDS.forEach((el) => {
-      let filteredArray = this.state.arrayOfActorIDs.filter(
-        (item) => item !== el
-      );
-      this.setState({ arrayOfActorIDs: filteredArray });
+  const resetAll = () => {
+    continueProcess = true;
+    timeoutsArray.length = 0;
+    allCompondedMovies.length = 0;
+    searchedIDS.length = 0;
+    cancelAllTimeouts();
+    setFinalArray([]);
+    setFinalRepeats([]);
+    setShowModal(false);
+    setSwitchActorsAllowed(true);
+    setShowWaitAnimation(false);
+    setNumberOfMoviesSearched(0);
+    reset();
+  };
+
+  const prepForSearch = (poolOfActorIDs) => {
+    const actorsWhoArePopularAndInPool = [];
+
+    const filteredOutSerchedIDs = poolOfActorIDs.filter(function (x) {
+      return searchedIDS.indexOf(x) < 0;
     });
-  }
 
-  goAgain = (actorID) => {
-    let popsInArray = [];
-
-    this.removePeople(actorID);
-
+    //Pick an actor at ranadom from pool
     let chosenID =
-      this.state.arrayOfActorIDs[
-        Math.floor(Math.random() * this.state.arrayOfActorIDs.length)
+      filteredOutSerchedIDs[
+        Math.floor(Math.random() * filteredOutSerchedIDs.length)
       ];
 
-    for (let index = 0; index < this.props.arrayOfPops.length; index++) {
-      if (
-        this.state.arrayOfActorIDs.includes(this.props.arrayOfPops[index].id)
-      ) {
-        popsInArray.push(this.props.arrayOfPops[index].id);
+    //We can make an array of actors who are in both the actorsByPopularity array and
+    //our pool.
+
+    for (let index = 0; index < actorsByPopularity.length; index++) {
+      if (filteredOutSerchedIDs.includes(actorsByPopularity[index].id)) {
+        actorsWhoArePopularAndInPool.push(actorsByPopularity[index].id);
       }
     }
-    chosenID = popsInArray[Math.floor(Math.random() * 4)];
 
-    this.setState({ arrayOfActorIDs: [] });
+    //Our chosedID can be reassinged to a random choice from that array
+    //if able.
+    if (actorsWhoArePopularAndInPool.length > 0) {
+      chosenID = actorsWhoArePopularAndInPool[Math.floor(Math.random() * 4)];
+    }
 
-    if (this.state.foundMatch.length === 0) {
-      this.byActorIDGetMoviesAndCredits(chosenID);
+    //Check if a match was found
+    if (continueProcess) {
+      byActorIDGetMoviesAndCredits(chosenID);
     } else {
-      this.formatInfo();
+      formatInfoForDisplay();
     }
   };
 
-  formatInfo = () => {
-    const promises = [];
-    this.state.searchedIDS.forEach((el) => {
-      let actorInfo = this.getActorInfo(el);
-      promises.push(actorInfo);
-    });
+  const formatInfoForDisplay = async () => {
+    const finalArrayTemp = [];
 
-    Promise.all(promises).then((responses) => {
-      for (let index = 0; index < this.state.searchedIDS.length + 1; index++) {
-        this.state.megaArray.forEach((actorsArrays) => {
-          actorsArrays.forEach((movie) => {
-            movie.credits.forEach((el) => {
-              if (
-                el.id === this.state.searchedIDS[index + 1] &&
-                movie.actor === this.state.searchedIDS[index]
-              ) {
-                let movieFinal = {
-                  lead: responses[index],
-                  movie: movie.film,
-                  credits: movie.credits,
-                  co: responses[index + 1],
-                };
+    //Get information about the actors saved in searchedIDS
+    const actorInfo = await movieServices.getActorInfo(searchedIDS);
 
-                this.setState({
-                  finalArray: [...this.state.finalArray, movieFinal],
-                });
-              }
-            });
+    //Iterate through actorInfo and allCompondedMovies arrays.
+    //Combine info in to an array of objects that will be used to create
+    //the solution's cards
+    for (let index = 0; index < searchedIDS.length + 1; index++) {
+      allCompondedMovies.forEach((actorsArrays) => {
+        actorsArrays.forEach((movie) => {
+          movie.credits.forEach((el) => {
+            if (
+              el.id === searchedIDS[index + 1] &&
+              movie.actor === searchedIDS[index]
+            ) {
+              const movieFinal = {
+                lead: actorInfo[index].data,
+                movie: movie.film,
+                credits: movie.credits,
+                co: actorInfo[index + 1].data,
+              };
+
+              finalArrayTemp.push(movieFinal);
+            }
           });
         });
-      }
-
-      let noRepeats = this.state.finalArray.filter(
-        (thing, index, self) =>
-          index ===
-          self.findIndex(
-            (t) =>
-              t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
-          )
-      );
-
-      let repeats = this.state.finalArray.filter(
-        (thing, index, self) =>
-          index !==
-          self.findIndex(
-            (t) =>
-              t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
-          )
-      );
-
-      this.setState({
-        showWaitAnimation: false,
-        finalArray: noRepeats,
-        finalRepeats: repeats,
       });
+    }
 
-      window.scrollBy({
-        top: 500,
-        behavior: "smooth",
-      });
+    //Create an array that does not contain repeated matches of actors
+    const noRepeats = finalArrayTemp.filter(
+      (thing, index, self) =>
+        index ===
+        self.findIndex(
+          (t) => t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
+        )
+    );
+
+    //Create an array that contains only the repeated matches of actors
+    const repeats = finalArrayTemp.filter(
+      (thing, index, self) =>
+        index !==
+        self.findIndex(
+          (t) => t.lead.id === thing.lead.id && t.lead.name === thing.lead.name
+        )
+    );
+
+    //Turn off wait spirala
+    setShowWaitAnimation(false);
+
+    //Reassign the finalArray to the array without repeats
+    setFinalArray(noRepeats);
+
+    //Set an array that contains repeats
+    setFinalRepeats(repeats);
+
+    //Scroll the screen a bit as solution's cards are rendered to the DOM
+    window.scrollBy({
+      top: 500,
+      behavior: "smooth",
     });
   };
-  byActorIDGetMoviesAndCredits = async (actorID) => {
-    console.log(`Searching ${actorID}`);
 
-    this.setState({ searchedIDS: [...this.state.searchedIDS, actorID] });
-    let arrayofAllCredits = [];
-    let arrayOfAllMovieInfo = [];
+  const byActorIDGetMoviesAndCredits = async (actorID) => {
+    const poolOfActorIDs = [];
 
-    let compoundedMovieArray = [];
+    // setSearchedIDS((prev) => [...prev, actorID]);
+    searchedIDS.push(actorID);
 
-    Promise.all([this.getMoviesActorIsIn(actorID)]).then((results) => {
-      // Get Array of An Actor's Movies
+    const compoundedMovieArray = [];
 
-      this.state.responseArray.forEach((el) => {
-        arrayofAllCredits.push(this.getMoviesCredits(el));
+    // Get Array of An Actor's Movie's IDs
 
-        arrayOfAllMovieInfo.push(this.getMovieInfo(el));
+    const arrayOfMovieIDs = await movieServices.getMoviesActorIsIn(actorID);
+
+    // For those movies, get all credits
+
+    const arrayofAllCredits = await movieServices.getMoviesCredits(
+      arrayOfMovieIDs
+    );
+
+    // For those movies, get all the information
+
+    const arrayOfAllMovieInfo = await movieServices.getMovieInfo(
+      arrayOfMovieIDs
+    );
+
+    //For the actor, create an array that has an object with the movie's credits and information
+
+    for (let index = 0; index < arrayOfMovieIDs.length; index++) {
+      compoundedMovieArray.push({
+        actor: actorID,
+        film: arrayOfAllMovieInfo[index].data,
+        credits: arrayofAllCredits[index].data.cast,
       });
+    }
 
-      // Get Array Those Movie's Credits
+    allCompondedMovies.push(compoundedMovieArray);
+    setNumberOfMoviesSearched((prev) => (prev += compoundedMovieArray.length));
 
-      Promise.all(arrayofAllCredits).then((creditResponse) => {
-        // Get Array Those Movie's Details
-
-        Promise.all(arrayOfAllMovieInfo).then((infoResponse) => {
-          for (let index = 0; index < infoResponse.length; index++) {
-            let compoundedMovie = {
-              actor: actorID,
-              film: infoResponse[index],
-              credits: creditResponse[index],
-            };
-
-            compoundedMovieArray.push(compoundedMovie);
+    compoundedMovieArray.forEach((movie) => {
+      movie.credits.forEach((actor) => {
+        //For each movie, check if actor is the one we are looking for.
+        if (actor.id === secondary.id) {
+          continueProcess = false;
+          searchedIDS.push(secondary.id);
+        } else {
+          //If it is not the one we are looking for and their ID is not alread
+          //in our arrayOfActorIDs, add them to the arraay
+          if (poolOfActorIDs.includes(actor.id) === false) {
+            poolOfActorIDs.push(actor.id);
           }
-
-          this.setState({
-            megaArray: [...this.state.megaArray, compoundedMovieArray],
-            numberOfMoviesSearched:
-              this.state.numberOfMoviesSearched + compoundedMovieArray.length,
-          });
-
-          compoundedMovieArray.forEach((movieArray) => {
-            movieArray.credits.forEach((el) => {
-              if (el.id === this.props.secondary.id) {
-                this.setState({
-                  foundMatch: [
-                    ...this.state.foundMatch,
-                    this.props.secondary.id,
-                  ],
-                  searchedIDS: [
-                    ...this.state.searchedIDS,
-                    this.props.secondary.id,
-                  ],
-                });
-              } else {
-                if (this.state.arrayOfActorIDs.includes(el.id) === false) {
-                  this.setState({
-                    arrayOfActorIDs: [...this.state.arrayOfActorIDs, el.id],
-                  });
-                }
-              }
-            });
-          });
-          this.setState({ responseArray: [] });
-
-          this.setState({
-            timeoutsArray: [
-              ...this.state.timeoutsArray,
-              setTimeout(() => {
-                this.goAgain(actorID);
-              }, 250),
-            ],
-          });
-        });
+        }
       });
     });
+
+    //Wait a bit and then call function to go again.
+    timeoutsArray.push(
+      setTimeout(() => {
+        prepForSearch(poolOfActorIDs);
+      }, 250)
+    );
   };
 
-  HandleRepeats = (index, lead, arr) => {
-    let re = arr.filter((el) => el.lead.id === lead);
-    if (re.length !== 0) {
+  //Display a button that will allow a user to see repeats
+  const HandleRepeats = (index, lead) => {
+    const repeatsForThisLead = finalRepeats.filter((el) => el.lead.id === lead);
+    if (repeatsForThisLead.length !== 0) {
       return (
         <Button
           variant="outline-primary"
           className="m-2 mt-4"
-          onClick={() => this.loadRepeats(lead, re, index)}
+          onClick={() => loadRepeats(index, repeatsForThisLead, lead)}
         >
-          View {re.length} more
+          View {repeatsForThisLead.length} more
         </Button>
       );
     } else {
@@ -308,194 +243,99 @@ class Auto extends React.Component {
     }
   };
 
-  loadRepeats = (id, arr, ind) => {
-    let temp = this.state.finalArray;
-    let temp2 = this.state.finalRepeats;
-    temp.splice(ind, 0, ...arr);
+  //Add repeats to the DOM if users requests
+  const loadRepeats = (index, repeatsForThisLead, lead) => {
+    finalArray.splice(index, 0, ...repeatsForThisLead);
 
-    arr.forEach((el) => {
-      let x = temp2.findIndex((x) => x.lead.id === el.lead.id);
-      temp2.splice(x, 1);
-    });
-    this.setState({ finalRepeats: temp2, finalArray: temp });
+    const newRepeats = finalRepeats.filter((el) => el.lead.id !== lead);
+
+    setFinalArray(finalArray);
+    setFinalRepeats(newRepeats);
   };
 
-  render() {
-    return (
-      <Container fluid>
-        <div>
-          {this.state.showReset && (
-            <Row className="justify-content-center mt-3">
-              <Button
-                variant="outline-danger"
-                size="lg"
-                onClick={() => this.reset()}
-              >
-                Reset
-              </Button>
-            </Row>
-          )}
-          {!this.state.showReset && (
-            <Row className="justify-content-center mt-3">
-              <Button
-                variant="outline-primary"
-                size="lg"
-                onClick={() => this.start()}
-              >
-                Connect
-              </Button>
-            </Row>
-          )}
-        </div>
-        {this.state.showWaitAnimation && (
-          <Row className="justify-content-center pt-4 text-center text-secondary">
-            <Col md="auto">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-4">
-                Number of Movies Searched: {this.state.numberOfMoviesSearched}
-              </p>
-            </Col>
-          </Row>
-        )}
-        {this.state.finalArray.map((el, index) => (
-          <Row className="justify-content-center my-2">
-            <Card
-              style={{ width: "20rem" }}
-              className="text-center mt-2 mb-1 p-4"
+  return (
+    <Container fluid>
+      <div>
+        {showReset && (
+          <Row className="justify-content-center mt-3">
+            <Button
+              variant="outline-danger"
+              size="lg"
+              onClick={() => resetAll()}
             >
-              <Card.Text className="text-center p-1">
-                <i>{el.movie.original_title}</i>
-              </Card.Text>
-              <Row className="justify-content-center">
-                <Col>
-                  {el.movie.poster_path && (
-                    <Card.Img
-                      className="rounded"
-                      src={
-                        "https://image.tmdb.org/t/p/w154/" +
-                        el.movie.poster_path
-                      }
-                    />
-                  )}
-                </Col>
-                <Col style={{ fontSize: "1.2rem" }}>
-                  <Card.Text className="mb-2">{el.lead.name}</Card.Text>
-
-                  <Card.Text className="my-3">- with -</Card.Text>
-
-                  <Card.Text className="mt-2">{el.co.name}</Card.Text>
-                </Col>
-              </Row>
-
-              <Row className="justify-content-center">
-                <Button
-                  className="m-2 mt-4"
-                  variant="outline-primary"
-                  onClick={() => this.handleShow(el)}
-                >
-                  Show Details
-                </Button>
-                {this.HandleRepeats(index, el.lead.id, this.state.finalRepeats)}
-              </Row>
-            </Card>
+              Reset
+            </Button>
           </Row>
-        ))}
-        {this.state.showModal && (
-          <Modal show={this.state.showModal} onHide={this.handleClose}>
-            <Modal.Body>
-              <Container>
-                <Row>
-                  <Col xs={12} md={12} className="mt-2">
-                    <h5 className="text-center">
-                      <i>{this.state.modalInfo.movie.original_title}</i>
-                    </h5>
-                  </Col>
-                </Row>
-                <Row className="my-2">
-                  <Col xs={6} md={6}>
-                    <Image
-                      src={
-                        "https://image.tmdb.org/t/p/w154/" +
-                        this.state.modalInfo.movie.poster_path
-                      }
-                    ></Image>
-                  </Col>
-
-                  <Col xs={6} md={6} style={{ fontSize: ".85rem" }}>
-                    <p>
-                      Length
-                      <br></br>
-                      {Math.floor(this.state.modalInfo.movie.runtime / 60)}h :{" "}
-                      {this.state.modalInfo.movie.runtime % 60}m
-                    </p>
-                    <p>
-                      Release Date:
-                      <br></br>
-                      {this.state.modalInfo.movie.release_date}
-                    </p>
-                    <p>
-                      Budget: <br></br>$
-                      {this.state.modalInfo.movie.budget
-                        .toString()
-                        .replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,")}
-                    </p>
-                    <p>
-                      Revenue: <br></br>$
-                      {this.state.modalInfo.movie.revenue
-                        .toString()
-                        .replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,")}
-                    </p>
-                  </Col>
-                </Row>
-                <Row className="border-top mt-2">
-                  <Col className="mt-2" xs={12} md={12}>
-                    <p style={{ fontSize: ".9rem" }} className="mt-2">
-                      {this.state.modalInfo.movie.overview}
-                    </p>
-                  </Col>
-                </Row>
-                <Row>
-                  <Table striped>
-                    <thead>
-                      <tr>
-                        <th></th>
-                        <th>Cast</th>
-                        <th>Character</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {this.state.modalInfo.credits.map((el) => (
-                        <tr>
-                          <td>
-                            {el.profile_path && (
-                              <Image
-                                style={{ width: "3rem" }}
-                                src={
-                                  "https://image.tmdb.org/t/p/w154/" +
-                                  el.profile_path
-                                }
-                              ></Image>
-                            )}
-                          </td>
-                          <td>{el.name}</td>
-                          <td>{el.character}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </Row>
-              </Container>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={this.handleClose}>
-                Close
-              </Button>
-            </Modal.Footer>
-          </Modal>
         )}
-      </Container>
-    );
-  }
-}
+        {!showReset && (
+          <Row className="justify-content-center mt-3">
+            <Button variant="outline-primary" size="lg" onClick={() => start()}>
+              Connect
+            </Button>
+          </Row>
+        )}
+      </div>
+      {showWaitAnimation && (
+        <Row className="justify-content-center pt-4 text-center text-secondary">
+          <Col md="auto">
+            <Spinner animation="border" variant="primary" />
+            <p className="mt-4">
+              Number of Movies Searched: {numberOfMoviesSearched}
+            </p>
+          </Col>
+        </Row>
+      )}
+      {finalArray.map((el, index) => (
+        <Row className="justify-content-center my-2">
+          <Card
+            style={{ width: "20rem" }}
+            className="text-center mt-2 mb-1 p-4"
+          >
+            <Card.Text className="text-center p-1">
+              <i>{el.movie.original_title}</i>
+            </Card.Text>
+            <Row className="justify-content-center">
+              <Col>
+                {el.movie.poster_path && (
+                  <Card.Img
+                    className="rounded"
+                    src={
+                      "https://image.tmdb.org/t/p/w154/" + el.movie.poster_path
+                    }
+                  />
+                )}
+              </Col>
+              <Col style={{ fontSize: "1.2rem" }}>
+                <Card.Text className="mb-2">{el.lead.name}</Card.Text>
+
+                <Card.Text className="my-3">- with -</Card.Text>
+
+                <Card.Text className="mt-2">{el.co.name}</Card.Text>
+              </Col>
+            </Row>
+
+            <Row className="justify-content-center">
+              <Button
+                className="m-2 mt-4"
+                variant="outline-primary"
+                onClick={() => handleShow(el)}
+              >
+                Show Details
+              </Button>
+              {HandleRepeats(index, el.lead.id)}
+            </Row>
+          </Card>
+        </Row>
+      ))}
+      {showModal && (
+        <ModalComponent
+          modalInfo={modalInfo}
+          showModal={showModal}
+          handleClose={handleClose}
+        />
+      )}
+    </Container>
+  );
+};
 
 export default Auto;

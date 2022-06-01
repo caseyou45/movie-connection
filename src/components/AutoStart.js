@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Container, Row, Image, Col, Card, Button } from "react-bootstrap";
-import Auto2 from "./AutoR";
+import Auto from "./Auto";
 import movieServices from "../services/movie";
 
 import Search from "./Search";
@@ -19,7 +19,7 @@ const AutoStart = () => {
     let currentPage = 1;
     const temp = [];
 
-    while (currentPage < 50) {
+    while (currentPage < 25) {
       currentPage += 1;
       const res = await movieServices.getArrayofPopularActors(currentPage);
       temp.push(...res);
@@ -62,7 +62,7 @@ const AutoStart = () => {
     setPrimary("");
     setSecondary("");
     setShowAuto(false);
-    setShowSearch(true);
+    setShowSearch(false);
     setShowPickMethod(false);
     setSwitchActorsAllowed(true);
   };
@@ -171,7 +171,6 @@ const AutoStart = () => {
               <Card style={{ width: "8rem", border: "0" }}>
                 {primary.profile_path && (
                   <Card.Img
-                    rounded
                     src={
                       "https://image.tmdb.org/t/p/w154/" + primary.profile_path
                     }
@@ -225,7 +224,7 @@ const AutoStart = () => {
       </Row>
 
       {showAuto && (
-        <Auto2
+        <Auto
           actorsByPopularity={actorsByPopularity}
           primary={primary}
           secondary={secondary}
