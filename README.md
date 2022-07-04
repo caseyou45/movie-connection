@@ -1,4 +1,12 @@
-# Getting Started with Create React App
+#Movie Connection
+ 
+Six degrees of Kevin Bacon is a fun game, but dredging your memory for the right actors and films can be hard. This easy-to-use website leverages The Movie Database (TMDb) API to do the hard work for you. Pick your own actors or have them chosen for you. The website will then automatically connect the two actors with the right films and actors. 
+
+On a theoretical level, most people are only a few degrees of separation away from each other. If you had the possibility of knowing the acquaintance of every person you know and those people’s acquaintances ad infinitum, you’d probably be surprised who you’d eventually connect to. The website basically uses cast lists to do the same.  
+
+In brief, the website uses a boatload of GET requests and Promises to get the information it needs. It then searches through the cast list for who it’s looking for. If it does not find who it’s looking for, it then repeats the search with an actor the original actor has worked with. It’s not perfect and may obviously miss an easier connection or come up emptyhanded. But it does work well enough to create surprising answers at times.  
+
+##Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
