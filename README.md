@@ -1,4 +1,4 @@
-Movie Connection
+# Movie Connection
  
 Six degrees of Kevin Bacon is a fun game, but dredging your memory for the right actors and films can be hard. This easy-to-use website leverages The Movie Database (TMDb) API to do the hard work for you. Pick your own actors or have them chosen for you. The website will then automatically connect the two actors with the right films and actors. 
 
