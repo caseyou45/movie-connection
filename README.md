@@ -6,7 +6,7 @@ On a theoretical level, most people are only a few degrees of separation away fr
 
 In brief, the website uses a boatload of GET requests and Promises to get the information it needs. It then searches through the cast list for who it’s looking for. If it does not find who it’s looking for, it then repeats the search with an actor the original actor has worked with. It’s not perfect and may obviously miss an easier connection or come up emptyhanded. But it does work well enough to create surprising answers at times.  
 
-##Getting Started with Create React App
+## Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
